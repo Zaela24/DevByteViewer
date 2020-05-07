@@ -16,3 +16,40 @@
  */
 
 package com.example.android.devbyteviewer.work
+
+import android.content.Context
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
+import com.example.android.devbyteviewer.database.getDatabase
+import com.example.android.devbyteviewer.repository.VideosRepository
+import retrofit2.HttpException
+
+/**
+ * Background process data worker to refresh video playlist
+ * Extends Worker class with Coroutines enabled
+ */
+class RefreshDataWorker(appContext: Context, params: WorkerParameters):
+        CoroutineWorker(appContext, params) {
+
+    /**
+     * Sets WORK_NAME for use in background process requests
+     */
+    companion object {
+        const val WORK_NAME = "RefreshDataWorker"
+    }
+
+    /**
+     * Specifies work to try with background process
+     */
+    override suspend fun doWork(): Payload {
+        val database = getDatabase(applicationContext)
+        val repository = VideosRepository(database)
+
+        return try {
+            repository.refreshVideos()
+            Payload(Result.SUCCESS) // If successful refresh, done
+        } catch (exception: HttpException) {
+            Payload(Result.RETRY) // If network error, try again later
+        }
+    }
+}

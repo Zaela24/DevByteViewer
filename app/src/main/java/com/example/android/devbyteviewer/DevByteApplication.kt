@@ -18,12 +18,25 @@
 package com.example.android.devbyteviewer
 
 import android.app.Application
+import android.os.Build
+import androidx.work.*
+import com.example.android.devbyteviewer.work.RefreshDataWorker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.util.concurrent.TimeUnit
 
 /**
  * Override application to setup background work via WorkManager
  */
 class DevByteApplication : Application() {
+
+    /**
+     *
+     */
+    val applicationScope = CoroutineScope(Dispatchers.Default)
+
 
     /**
      * onCreate is called before the first screen is shown to the user.
@@ -34,5 +47,51 @@ class DevByteApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         Timber.plant(Timber.DebugTree())
+        delayedInit()
+    }
+
+    /**
+     * Launches recurring background work with Coroutine to avoid delays in starting app
+     */
+    private fun delayedInit(){
+        applicationScope.launch {
+            setupRecurringWork()
+        }
+    }
+
+    private fun setupRecurringWork() {
+        /**
+         * Sets background process constraints:
+         * - Must be on an unmetered network (user won't be charged for data use)
+         * - Battery must not be low
+         * - Device must be charging
+         * - If Android Marshmallow or above, device must be on idle
+         */
+        val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.UNMETERED)
+                .setRequiresBatteryNotLow(true)
+                .setRequiresCharging(true)
+                .apply {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        setRequiresDeviceIdle(true)
+                    }
+                }.build()
+
+        /**
+         * Sets repeating background request to once per day
+         */
+        val repeatingRequest = PeriodicWorkRequestBuilder<RefreshDataWorker>(1,
+                TimeUnit.DAYS)
+                .setConstraints(constraints)
+                .build()
+
+        /**
+         * Enqueues periodic work based on constraints defined above
+         */
+        WorkManager.getInstance().enqueueUniquePeriodicWork(
+                RefreshDataWorker.WORK_NAME,
+                ExistingPeriodicWorkPolicy.KEEP,
+                repeatingRequest
+        )
     }
 }
