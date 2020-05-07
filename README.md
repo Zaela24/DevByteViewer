@@ -5,6 +5,8 @@ This is the toy app for Lesson 9 of the [Android App Development in Kotlin cours
 ## Zaela's Notes
 This lesson started with an already completed online-only app. I simply learnt how to implement an offline cache and some background processes to speed up the app a bit on startup.
 
+One really interesting capability of AndroidX's WorkManager library that I learnt about is the ability to specify constraints for background processes so that apps are not wasting user's battery or metered data.
+
 ## DevByte
 
 DevByte Viewer is an example app that showcases using
